@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grafik Örneği</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <button id="connectButton">Bağlan ve Veriyi Al</button>
+    <canvas id="myChart" width="200" height="100"></canvas>
+    <script>
+        let myChart;
+
+        async function getData() {
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                const reader = port.readable.getReader();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    // Uint8Array'den string'e çevirme
+                    const dataString = new TextDecoder().decode(value);
+                    const data = dataString.split(' ').map(Number); // Veriyi al ve diziye çevir
+
+                    // X ekseni için indeksler
+                    const labels = data.map((_, index) => index);
+
+                    // Grafik oluşturma (varsa mevcut grafiği güncelle)
+                    if (myChart) {
+                        myChart.data.labels = labels;
+                        myChart.data.datasets[0].data = data;
+                        myChart.update();
+                    } else {
+                        const ctx = document.getElementById('myChart').getContext('2d');
+                        myChart = new Chart(ctx, {
+                            type: 'line', // Çizgi grafiği
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Veri Seti',
+                                    data: data,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 2,
+                                    fill: false, // Alanı doldurmaz
+                                    pointRadius: 5, // Noktaların boyutu
+                                    pointBackgroundColor: 'rgba(75, 192, 192, 1)' // Noktaların rengi
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Hata:', error);
+            }
+        }
+
+        document.getElementById('connectButton').addEventListener('click', getData);
+    </script>
+</body>
+</html>
